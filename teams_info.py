@@ -20,6 +20,9 @@ def addTeamsInfo(db):
             'abbreviation': teamInfo['abbreviation'],
             'teamName': teamInfo['teamName'],
             'locationName': teamInfo['locationName'],
+            'logo' : {
+                'link': constants.getTeamLogoUrl(teamInfo['abbreviation'])
+            },
             'division' : {
                 'id' : teamInfo['division']['id'],
                 'name' : teamInfo['division']['name']
