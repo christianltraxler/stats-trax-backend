@@ -26,9 +26,9 @@ def addPlayersInfo(db):
 
             # If there is a primaryNumber key use it, else use None
             if 'primaryNumber' in playerInfo:
-                primaryNumber = playerInfo['primaryNumber']
+                jerseyNumber = playerInfo['primaryNumber']
             else:
-                primaryNumber = None
+                jerseyNumber = None
 
             # Based on the info of the player, generate a dictionary 
             player = {
@@ -38,7 +38,7 @@ def addPlayersInfo(db):
                     'firstName': playerInfo['firstName'],
                     'lastName': playerInfo['lastName']
                 },
-                'primaryNumber': primaryNumber,
+                'jerseyNumber': jerseyNumber,
                 'currentTeam': {
                     'id': team['id'],
                     'name': team['name'],

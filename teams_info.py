@@ -8,11 +8,11 @@ import constants
 ''' Adds all the active teams to the stats_trax.teams'''
 def addTeamsInfo(db):
     # Get the dictionary of the info of all the active teams
-    response = requests.get(constants.getAllTeamsInfoUrl())
-    teamsInfo = response.json()
+    teamsDict = requests.get(constants.getAllTeamsInfoUrl()).json()['teams']
 
+    # Iterate through all the teams 
     # For each team, either add it to the dictionary or skip if it already exists
-    for teamInfo in teamsInfo['teams']:
+    for teamInfo in teamsDict:
         # Based on the info of the team, generate a dictionary 
         team = {
             'id': teamInfo['id'],
@@ -40,7 +40,8 @@ def addTeamsInfo(db):
         # Find any existing teams in the database with the same id
         dbTeam = db.teams.find_one({'id': teamInfo['id']})
         # Removed the _id key to compare the new dictionary with the one from the collection
-        dbTeam.pop('_id')
+        if (dbTeam != None):
+            dbTeam.pop('_id')
 
         # If the new and collection dictionaries are different
         if (dbTeam != team):
