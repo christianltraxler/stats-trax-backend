@@ -10,27 +10,41 @@ import constants
 ''' Adds the games from  to stats_trax.games'''
 def addShots(db):
     # Get the info for each game
-    gamesInfo = db.schedule.find()
+    gamesCollection = db.schedule.find()
 
+    # Initialize the gamesInfo array
+    gamesInfo = []
+    # Iterate through the collection of games
+    for gameResult in gamesCollection:
+        gamesInfo.append(gameResult)
+
+    # Iterate through all the games
     for gameInfo in gamesInfo:
+        if gameInfo['id'] < 2019020950:
+            print(gameInfo['id'])
+            continue
+        # Get the dict on the game based on the id
         game = requests.get(constants.getGameUrl(gameInfo['id'])).json()
 
+        # Iterate through the plays of the game
         for play in game['liveData']['plays']['allPlays']:
-            if not 'team' in play or not 'players' in play:
-                continue
+            # Filter out plays that are not shots
             if not 'SHOT' in play['result']['eventTypeId'] and play['result']['eventTypeId'] != 'GOAL':
                 continue
+            # Skip if the coordinates are not given
             if play['coordinates'] is None:
                 continue
-            
+            # Skip if the shotType is not specified (when event=GOAL or event=SHOT)
             if not 'secondaryType' in play['result']:
                 if not '_SHOT' in play['result']['eventTypeId']:
                     print('Skipping shot (shotType missing): Game=' + str(gameInfo['id']) + ' - eventId=' + str(play['about']['eventIdx']))
                     continue
                 shotType = None
+            # Otherwise specify the shotType
             else:
                 shotType = play['result']['secondaryType']
 
+            # If gameWinningGoal, emptyNet or strength are not specified, set them as none
             if 'gameWinningGoal' in play:
                 gameWinningGoal = play['result']['gameWinningGoal']
             else:
@@ -44,9 +58,23 @@ def addShots(db):
             else:
                 strength = None
 
-            shootsCatches = game['gameData']['players']['ID' + str(play['players'][0]['player']['id'])]['shootsCatches']
+            # Based on the type of shot, shooterIndex is the position of the shooter
+            if play['result']['eventTypeId'] == 'BLOCKED_SHOT':
+                shooterIndex = 1
+            else:
+                shooterIndex = 0
+
+            # If shootsCatches is specified, use the given value, otherwise, set it to None
+            if 'shootsCatches' in game['gameData']['players']['ID' + str(play['players'][shooterIndex]['player']['id'])]:
+                shootsCatches = game['gameData']['players']['ID' + str(play['players'][shooterIndex]['player']['id'])]['shootsCatches']
+            else:
+                shootsCatches = None 
+
+            # Initialize coordinates variables to simplify code
             xCoord = play['coordinates']['x']
             yCoord = play['coordinates']['y']   
+
+            # Create the shot dict
             shot = {
                 'gameId': gameInfo['id'],
                 'gameType': gameInfo['gameType'], 
@@ -59,14 +87,14 @@ def addShots(db):
                     'periodTime': play['about']['periodTime'],
                     'periodTimeRemaining': play['about']['periodTimeRemaining'],
                 },
-                'players': getPlayersFromShot(game, play), # Fix method to use new game
+                'players': getPlayersFromShot(game, play), 
                 'shot': {
                     'shotType': shotType,
                     'shotAngle': getShotAngle(xCoord, yCoord),
                     'shotAngleAdjusted': abs(getShotAngle(xCoord, yCoord)),
                     'shotDistance': math.sqrt((90 - xCoord)*(90 - xCoord) + yCoord*yCoord),
                     'zone': getZone(play['about']['period'], xCoord), 
-                    'offWing': isOffWing(shootsCatches, yCoord),
+                    'offWing': isOffWing(shootsCatches, xCoord, yCoord),
                     'strength': strength,
                     'gameWinningGoal': gameWinningGoal,
                     'emptyNet': emptyNet       
@@ -81,7 +109,7 @@ def addShots(db):
                 'score': play['about']['goals']
             }
 
-            # Find any existing games in the database with the same id
+            # Find any existing shots in the database with the same id
             dbShot = db.shots.find_one({'gameId': gameInfo['id'], 'eventId': play['about']['eventIdx']})
 
             # Removed the _id key to compare the new dictionary with the one from the collection
@@ -98,29 +126,41 @@ def addShots(db):
             else:
                 print('Skipping shot: Game=' + str(gameInfo['id']) + ' - eventId=' + str(play['about']['eventIdx']))
 
+''' Get the zone of the shot based on the period and x coordinate '''
 def getZone(period, xCoord):
+    # If the x coordinate is withing 25 of the center, it is in the neutral zone
     if abs(xCoord) < 25.0:
         return 'NEUTRAL'
 
+    # For periods 1/3, a positive x coordinate indicates it is in the home zone
     if xCoord > 0:
         homeZone = True
     else:
         homeZone = False
 
+    # For period 2, the zones are the opposite
     if period % 2 == 0:
         homeZone = not homeZone
     
+    # Based on the homeZone, return HOME/AWAY
     if homeZone:
         return 'HOME'
     else:
         return 'AWAY'
 
-def isOffWing(shoots, yCoord):
-    if (shoots == 'R' and abs(yCoord) > 0) or (shoots == 'L' and abs(yCoord < 0)):
+''' Check whether the shot was on the offwing '''
+def isOffWing(shoots, xCoord, yCoord):
+    # Return true if they shoot right and the coordinates have the same sign
+    if shoots == 'R' and (xCoord > 0) == (yCoord > 0):
         return True
+    # Return true if they shoot left and the coordinates have opposite signs
+    elif shoots == 'L' and (xCoord > 0) != (yCoord > 0):
+        return True
+    # Else return false
     else:
         return False
 
+'''  '''
 def getTeamsFromShot(gameDict, play):
 
     # If the team specified in the play is the same as the home team
@@ -153,13 +193,18 @@ def getPlayersFromShot(gameDict, play):
 
     # Iterate through the players
     for player in play['players']:
+        # If the shootsCatches is specified, set it to the given value, else set it to None, 
+        if 'shootsCatches' in gameDict['gameData']['players']['ID' + str(player['player']['id'])]:
+            shootsCatches = gameDict['gameData']['players']['ID' + str(player['player']['id'])]['shootsCatches']
+        else:
+            shootsCatches = None 
 
         # Set the add to the player dict
         players[player['playerType']] = {
             'id': player['player']['id'],
             'name': player['player']['fullName'],
             'playerType': player['playerType'],
-            'shootsCatches': gameDict['gameData']['players']['ID' + str(player['player']['id'])]['shootsCatches']
+            'shootsCatches': shootsCatches
         }
 
     # Return players dict
