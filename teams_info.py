@@ -23,6 +23,8 @@ def addTeamsInfo(db):
             'logo' : {
                 'link': constants.getTeamLogoUrl(teamInfo['abbreviation'])
             },
+            'roster': getRosters(teamInfo['id'], 2015, 2021),
+            'teamStats': getTeamStats(teamInfo['id'], 2015, 2020),
             'division' : {
                 'id' : teamInfo['division']['id'],
                 'name' : teamInfo['division']['name']
@@ -52,3 +54,63 @@ def addTeamsInfo(db):
             db.teams.insert_one(team)
         else:
             print('Skipping team: ' + team['name'])
+
+''' Cycle through all the years specified to get the team rosters for that year '''
+def getRosters(teamId, startYear, endYear):
+    # Initialize rosters (to be returned) and year variable to cycle
+    rosters = {}
+    year = startYear
+
+    # Cycle through all the years specified
+    while (year < endYear):
+        # For VGK, if the year is less than 2017, change the year to 2017 (their first season)
+        if (teamId == 54 and year < 2017):
+            year = 2017
+
+        # Initialize the roster dict for the season
+        rosters[str(year) + str(year + 1)] = {}
+
+        # Get the team roster for the season
+        teamRoster = requests.get(constants.getTeamRosterForSeason(year, teamId)).json()
+        
+        # Cycle through the players in the roster
+        for player in teamRoster['roster']:
+            # Create the player dict based on the player's id
+            rosters[str(year) + str(year + 1)][str(player['person']['id'])] = {
+                'id': player['person']['id'],
+                'name': player['person']['fullName']
+            }
+        # Increment the year 
+        year = year + 1
+
+    # Return the rosters
+    return rosters
+
+''' Cycle through all the years specified to get the team stats for the year '''
+def getTeamStats(teamId, startYear, endYear): 
+    # Initialize stats (to be returned) and year variable to cycle
+    stats = {}
+    year = startYear
+
+    # Cycle through all the years specified
+    while (year < endYear):
+        # For VGK, if the year is less than 2017, change the year to 2017 (their first season)
+        if (teamId == 54 and year < 2017):
+            year = 2017
+
+        # Initialize the stats dict for the season
+        stats[str(year) + str(year + 1)] = {}
+
+        # Get the team stats for the season
+        teamStats = requests.get(constants.getTeamStatsForSeason(year, teamId)).json()
+        
+        # Create the stats dict based on the teamStats json
+        stats[str(year) + str(year + 1)] = {
+            'numbers': teamStats['teams'][0]['teamStats'][0]['splits'][0]['stat'],
+            'rankings': teamStats['teams'][0]['teamStats'][0]['splits'][1]['stat']
+        }
+        # Increment the year 
+        year = year + 1
+
+    # Return the stats dict
+    return stats

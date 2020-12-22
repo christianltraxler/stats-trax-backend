@@ -14,5 +14,5 @@ if __name__ == "__main__":
     #players_info.addPlayersInfo(db)
     #schedule.addScheduleInfo(db)
     #games.addGames(db)
-    shots.addShots(db)
+    #shots.addShots(db)
 

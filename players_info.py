@@ -4,6 +4,7 @@ import requests
 from pymongo import MongoClient
 
 import constants
+import helper
 
 ''' Adds all the active players to the stats_trax.players'''
 def addPlayersInfo(db):
@@ -24,12 +25,6 @@ def addPlayersInfo(db):
             playerInfo = playerResponse.json()
             playerInfo = playerInfo['people'][0]
 
-            # If there is a primaryNumber key use it, else use None
-            if 'primaryNumber' in playerInfo:
-                jerseyNumber = playerInfo['primaryNumber']
-            else:
-                jerseyNumber = None
-
             # Based on the info of the player, generate a dictionary 
             player = {
                 'id': playerInfo['id'],
@@ -38,7 +33,7 @@ def addPlayersInfo(db):
                     'firstName': playerInfo['firstName'],
                     'lastName': playerInfo['lastName']
                 },
-                'jerseyNumber': jerseyNumber,
+                'jerseyNumber': ifKeyExists(playerInfo, 'primaryNumber'),
                 'currentTeam': {
                     'id': team['id'],
                     'name': team['name'],
@@ -51,6 +46,7 @@ def addPlayersInfo(db):
                     'type': playerInfo['primaryPosition']['type'],
                     'abbreviation': playerInfo['primaryPosition']['abbreviation']
                 },
+                'stats': getPlayerStats(playerInfo['id']),
                 'height':  playerInfo['height'],
                 'weight': playerInfo['weight'],
                 'shootsCatches': playerInfo['shootsCatches'],
@@ -83,5 +79,24 @@ def addPlayersInfo(db):
             else:
                 print('Skipping player: ' + player['name']['fullName'])
 
+
+def getPlayerStats(playerId):
+    stats = []
+    playerStats = requests.get('https://statsapi.web.nhl.com/api/v1/people/' + str(playerId) + '/stats?stats=yearByYear').json()
+
+    for yearStats in playerStats['stats'][0]['splits']:
+        stats.append({
+            'season': yearStats['season'],
+            'stats': yearStats['stat'],
+            'team': {
+                'id': helper.ifKeyExists(yearStats['team'], 'id'),
+                'name': yearStats['team']['name']
+            },
+            'league': {
+                'id': helper.ifKeyExists(yearStats['league'], 'id'),
+                'name': yearStats['league']['name']
+            }
+        })
+    return stats
 
 

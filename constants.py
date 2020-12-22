@@ -28,5 +28,8 @@ def getScheduleUrl(year):
 def getGameUrl(gameId):
     return('https://statsapi.web.nhl.com/api/v1/game/' + str(gameId) + '/feed/live')
 
-blackListEvents = ['GAME_SCHEDULED', 'PERIOD_READY', 'PERIOD_START', 'STOP', 'PERIOD_END', 'PERIOD_OFFICIAL', 'GAME_END', 'GAME_OFFICIAL', 'SHOOTOUT_COMPLETE', 'EARLY_INT_START', 'EARLY_INT_END', 'CHALLENGE', 'EMERGENCY_GOALTENDER']
-        
+def getTeamStatsForSeason(year, teamId):
+    return('https://statsapi.web.nhl.com/api/v1/teams/' + str(teamId) + '?expand=team.stats&season=' + str(year) + str(year + 1))
+
+def getTeamRosterForSeason(year, teamId):
+    return('https://statsapi.web.nhl.com/api/v1/teams/' + str(teamId) + '/roster?season=' + str(year) + str(year + 1))      
