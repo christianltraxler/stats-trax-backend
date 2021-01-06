@@ -4,7 +4,7 @@ import requests
 from pymongo import MongoClient
 
 import info
-import teams_info, players_info, schedule, shots, games
+import teams_info, players_info, schedule, shots, games, countries
 
 if __name__ == "__main__":
     client = MongoClient(info.mongoLink)
@@ -15,4 +15,5 @@ if __name__ == "__main__":
     #schedule.addScheduleInfo(db)
     #games.addGames(db)
     #shots.addShots(db)
+    countries.addCountries(db)
 

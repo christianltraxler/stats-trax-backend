@@ -33,3 +33,6 @@ def getTeamStatsForSeason(year, teamId):
 
 def getTeamRosterForSeason(year, teamId):
     return('https://statsapi.web.nhl.com/api/v1/teams/' + str(teamId) + '/roster?season=' + str(year) + str(year + 1))      
+
+def getCountriesUrl():
+    return('https://api.nhle.com/stats/rest/en/country')
